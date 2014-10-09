@@ -1,0 +1,12 @@
+Source: test-db
+Section: perl
+Priority: standard
+Maintainer: Nathaniel Nutter <nnutter@genome.wustl.edu>
+Build-Depends: debhelper (>= 7.0.0)
+Standards-Version: 3.9.2
+Homepage: https://github.com/genome/TestDbServer
+
+Package: test-db
+Architecture: all
+Depends: libwww-perl, libjson-perl, perl
+Description: Command-line client for the TestDbServer service.
