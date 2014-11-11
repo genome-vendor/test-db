@@ -1,6 +1,5 @@
 package TestDbServer::Command::CreateTemplateFromDatabase;
 
-use File::Temp;
 use TestDbServer::PostgresInstance;
 
 use Moose;
@@ -10,6 +9,7 @@ has name => ( isa => 'Str', is => 'ro', required => 1 );
 has note => ( isa => 'Maybe[Str]', is => 'ro', required => 1 );
 has database_id => ( isa => 'Str', is => 'ro', required => 1 );
 has schema => ( isa => 'TestDbServer::Schema', is => 'ro', required => 1 );
+has superuser => ( isa => 'Str', is => 'ro', required => 1 );
 
 sub execute {
     my $self = shift;
@@ -23,31 +23,17 @@ sub execute {
                     host => $database->host,
                     port => $database->port,
                     owner => $database->owner,
-                    name => $database->name,
+                    name => $self->name,
+                    superuser => $self->superuser,
                 );
-
-    my $dump_fh = File::Temp->new(TEMPLATE => 'dump_' . $self->database_id . '_XXXX',
-                                    SUFFIX => '.sql',
-                                    TMPDIR => 1);
-    $dump_fh->close();
-
-    $pg->exportdb($dump_fh->filename);
-
-    my $sql_script = do {
-        local $/;
-        open my $fh, '<', $dump_fh;
-        unless ($fh) {
-            Exception::CannotOpenFile->throw(error => $!, path => $dump_fh->filename);
-        }
-        <$fh>;
-    };
 
     my $template = $self->schema->create_template(
                                 name => $self->name,
                                 note => $self->note,
                                 owner => $database->owner,
-                                sql_script => $sql_script,
                             );
+
+    $pg->createdb_from_template( $database->name );
 
     return $template->template_id;
 }

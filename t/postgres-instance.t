@@ -11,7 +11,7 @@ use TestDbServer::PostgresInstance;
 use strict;
 use warnings;
 
-plan tests => 4;
+plan tests => 2;
 
 my $config = TestDbServer::Configuration->new_from_path();
 my $host = $config->db_host;
@@ -40,84 +40,43 @@ subtest 'create connect delete' => sub {
     ok( ! connect_to_db($db_name), 'Cannot connect to deleted database');
 };
 
-subtest 'import db' => sub {
-    plan tests => 4;
+subtest 'create db from template' => sub {
+    plan tests => 5;
 
-    my $fh = File::Temp->new();
-    $fh->print('CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)');
-    $fh->close();
-
-    my $pg = TestDbServer::PostgresInstance->new(
+    my $original_pg = TestDbServer::PostgresInstance->new(
                 host => $host,
                 port => $port,
                 owner => $owner,
                 superuser => $superuser,
             );
-    ok($pg->createdb, 'Create database');
+    ok($original_pg->createdb, 'Create original DB');
+    {
+        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                        $original_pg->name, $original_pg->host, $original_pg->port),
+                                $original_pg->owner,
+                                '');
+        $dbi->do('CREATE TABLE foo(foo_id integer NOT NULL PRIMARY KEY)');
+    }
 
-    ok($pg->importdb($fh->filename), 'import');
 
-    my $dbh = connect_to_db($pg->name);
+    my $copy_pg = TestDbServer::PostgresInstance->new(
+                host => $host,
+                port => $port,
+                owner => $owner,
+                superuser => $superuser,
+            );
+    ok($copy_pg->createdb_from_template($original_pg->name), 'Create database from template');
+
+    my $dbh = connect_to_db($copy_pg->name);
     my $sth = $dbh->table_info('','','foo','TABLE');
     my $rows = $sth->fetchall_arrayref({TABLE_NAME => 1});
     is_deeply($rows,
         [ { TABLE_NAME => 'foo' } ],
-        'Import created table');
+        'Copied created table');
 
     $dbh->disconnect();
-    ok($pg->dropdb(), 'drop database');
-};
-
-subtest 'importdb throws exception' => sub {
-    plan tests => 3;
-
-    my $fh = File::Temp->new();
-    $fh->print('CREATE TABLE foo(foo_id integer NULL KEY)');  # invalid SQL
-    $fh->close();
-
-    my $pg = TestDbServer::PostgresInstance->new(
-                host => $host,
-                port => $port,
-                owner => $owner,
-                superuser => $superuser,
-            );
-    ok($pg->createdb, 'Create database');
-
-    throws_ok { $pg->importdb($fh->filename) }
-            'Exception::CannotImportDatabase',
-            'Importing broken SQL generates exception';
-
-    ok($pg->dropdb(), 'drop db');
-};
-
-subtest 'export db' => sub {
-    plan tests => 6;
-
-    my $pg = TestDbServer::PostgresInstance->new(
-                host => $host,
-                port => $port,
-                owner => $owner,
-                superuser => $superuser,
-            );
-    ok($pg->createdb, 'Create database');
-
-    my $dbh = connect_to_db($pg->name);
-    ok($dbh->do(q(CREATE TABLE foo (foo_id integer NOT NULL PRIMARY KEY))),
-        'create table in database');
-
-    my ($fh, $filename) = File::Temp::tempfile(UNLINK => 1);
-    $fh->close();
-    ok($pg->exportdb($filename), 'export');
-    ok(-f $filename, "exported file exists: $filename");
-    my $contents = do {
-        local $/;
-        open(my $fh, '<', $filename);
-        <$fh>;
-    };
-    like($contents, qr/^CREATE TABLE foo/mi, 'Dump contains expected CREATE TABLE');
-
-    $dbh->disconnect();
-    ok($pg->dropdb(), 'drop database');
+    ok($original_pg->dropdb(), 'drop original database');
+    ok($copy_pg->dropdb(), 'drop copy database');
 };
 
 sub connect_to_db {
