@@ -3,5 +3,5 @@ bin/test-db-database-create usr/bin
 bin/test-db-database-list usr/bin
 bin/test-db-delete usr/bin
 bin/test-db-template-list usr/bin
-bin/test-db-upload-template usr/bin
+bin/test-db-template-create usr/bin
 lib/TestDbServer/CmdLine.pm usr/lib/perl5/TestDbServer
