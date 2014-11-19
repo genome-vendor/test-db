@@ -1,3 +1,10 @@
+test-db (0.0.4-1) precise; urgency=low
+
+  * New upstream version, 0.0.4.
+  * Fix hashbangs to use /usr/bin/perl.
+
+ -- Nathaniel Nutter <nnutter@genome.wustl.edu>  Wed, 19 Nov 2014 16:16:12 -0600
+
 test-db (0.0.3-1) precise; urgency=low
 
   * New upstream version, 0.0.3.

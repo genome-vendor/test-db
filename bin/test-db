@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 # Entry point for the client-side command-line tool for the test_db_server REST service
 
