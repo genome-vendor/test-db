@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 
 use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
 use LWP;
