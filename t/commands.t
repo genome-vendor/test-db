@@ -2,8 +2,6 @@ use Mojo::Base -strict;
 
 use Test::More;
 use Test::Exception;
-use Mojo::Upload;
-use Mojo::Asset::Memory;
 
 use File::Temp qw();
 
@@ -15,7 +13,6 @@ use FakeApp;
 use DBI;
 use Data::UUID;
 
-use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::CreateTemplateFromDatabase;
 use TestDbServer::Command::CreateDatabaseFromTemplate;
 use TestDbServer::Command::DeleteTemplate;
@@ -33,7 +30,7 @@ subtest 'create template from database' => sub {
     my $pg = new_pg_instance();
 
     note('original database named '.$pg->name);
-    my $database = $schema->create_database( map { $_ => $pg->$_ } qw( host port name owner ) );
+    my $database = $schema->create_database( map { $_ => $pg->$_ } qw( name owner ) );
     # Make a table in the database
     my $table_name = "test_table_$$";
     {
@@ -46,7 +43,7 @@ subtest 'create template from database' => sub {
         $dbi->disconnect;
     }
 
-    my $new_template_name = $uuid_gen->create_str;
+    my $new_template_name = TestDbServer::PostgresInstance::unique_db_name();
 
     my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
                     name => $new_template_name,
@@ -54,6 +51,8 @@ subtest 'create template from database' => sub {
                     database_id => $database->database_id,
                     schema => $schema,
                     superuser => $config->db_user,
+                    host => $pg->host,
+                    port => $pg->port,
                 );
     ok($cmd, 'new');
     my $template_id = $cmd->execute();
@@ -99,8 +98,8 @@ subtest 'create database' => sub {
     ok($blank_db->database_id, 'execute - blank db');
 
     my $blank_pg = TestDbServer::PostgresInstance->new(
-                                host => $blank_db->host,
-                                port => $blank_db->port,
+                                host => $config->db_host,
+                                port => $config->db_port,
                                 name => $blank_db->name,
                                 owner => $blank_db->owner,
                                 superuser => $config->db_user,
@@ -142,7 +141,7 @@ subtest 'create database with owner' => sub {
 
     # connect to the newly created database
     my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $database->host, $database->port),
+                                    $database->name, $config->db_host, $config->db_port),
                             $pg->owner, '');
     ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
     $dbi->disconnect;
@@ -155,8 +154,8 @@ subtest 'create database with owner' => sub {
 
     # remove the created database
     TestDbServer::PostgresInstance->new(
-                        host => $database->host,
-                        port => $database->port,
+                        host => $config->db_host,
+                        port => $config->db_port,
                         owner => $database->owner,
                         superuser => $config->db_user,
                         name => $database->name
@@ -233,7 +232,7 @@ subtest 'create database from template' => sub {
 
     # connect to the newly created database
     my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $database->host, $database->port),
+                                    $database->name, $config->db_host, $config->db_port),
                             $database->owner, '');
     ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
     $dbi->disconnect;
@@ -243,8 +242,8 @@ subtest 'create database from template' => sub {
 
     # remove the created database
     TestDbServer::PostgresInstance->new(
-                        host => $database->host,
-                        port => $database->port,
+                        host => $config->db_host,
+                        port => $config->db_port,
                         owner => $database->owner,
                         superuser => $config->db_user,
                         name => $database->name
@@ -288,6 +287,8 @@ subtest 'delete database' => sub {
                             database_id => $database->database_id,
                             schema => $schema,
                             superuser => $config->db_user,
+                            host => $config->db_host,
+                            port => $config->db_port,
                         );
     ok($cmd, 'new delete database');
     ok($cmd->execute(), 'execute delete database');
@@ -297,6 +298,8 @@ subtest 'delete database' => sub {
                             database_id => 'bogus',
                             schema => $schema,
                             superuser => $config->db_user,
+                            host => $config->db_host,
+                            port => $config->db_port,
                         );
     ok($cmd, 'new delete not existant');
     throws_ok { $cmd->execute() }
@@ -317,7 +320,7 @@ subtest 'delete with connections' => sub {
                     )->execute();
     ok($database, 'Create database');
     my $dbh = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $database->host, $database->port),
+                                    $database->name, $config->db_host, $config->db_port),
                             $database->owner,
                             '');
     ok($dbh, 'connect to created database');
@@ -325,6 +328,8 @@ subtest 'delete with connections' => sub {
                                     database_id => $database->id,
                                     schema => $schema,
                                     superuser => $config->db_user,
+                                    host => $config->db_host,
+                                    port => $config->db_port,
                                 );
     ok($cmd, 'new');
     throws_ok { $cmd->execute() }
@@ -342,7 +347,7 @@ sub new_pg_instance {
             owner => $config->test_db_owner,
             superuser => $config->db_user,
         );
-    $pg->createdb();
+    $pg->createdb_from_template('template1');
     return $pg;
 }
 

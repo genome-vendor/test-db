@@ -5,7 +5,6 @@ use Try::Tiny;
 use File::Basename;
 
 use TestDbServer::Utils;
-use TestDbServer::Command::SaveTemplateFile;
 use TestDbServer::Command::DeleteTemplate;
 use TestDbServer::Command::CreateTemplateFromDatabase;
 
@@ -98,12 +97,16 @@ sub save {
             }
         }
 
+        my($host, $port) = $self->app->host_and_port_for_created_database();
+
         my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
                         name => $self->param('name') || undef,
                         note => $self->param('note') || undef,
                         database_id => $self->param('based_on') || undef,
                         schema => $schema,
                         superuser => $self->app->configuration->db_user,
+                        host => $host,
+                        port => $port,
                     );
         $schema->txn_do(sub {
             $template_id = $cmd->execute();
@@ -158,7 +161,7 @@ sub delete {
         });
     }
     catch {
-        if (ref($_) && $_->isa('Exception::TemplateNotFound') || $_->isa('Exception::CannotUnlinkFile')) {
+        if (ref($_) && $_->isa('Exception::TemplateNotFound')) {
             $self->app->log->error("template $id does not exist");
             $return_code = 404;
         } else {
