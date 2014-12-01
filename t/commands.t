@@ -22,7 +22,7 @@ my $config = TestDbServer::Configuration->new_from_path();
 my $schema = create_new_schema($config);
 my $uuid_gen = Data::UUID->new();
 
-plan tests => 8;
+plan tests => 7;
 
 subtest 'create template from database' => sub {
     plan tests => 5;
@@ -34,10 +34,7 @@ subtest 'create template from database' => sub {
     # Make a table in the database
     my $table_name = "test_table_$$";
     {
-        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                        $pg->name, $pg->host, $pg->port),
-                                $pg->owner,
-                                '');
+        my $dbi = _connect_to_database($pg->name, $pg->owner);
         ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
             'Create table in base database');
         $dbi->disconnect;
@@ -48,7 +45,7 @@ subtest 'create template from database' => sub {
     my $cmd = TestDbServer::Command::CreateTemplateFromDatabase->new(
                     name => $new_template_name,
                     note => 'new template from database',
-                    database_id => $database->database_id,
+                    database_name => $database->name,
                     schema => $schema,
                     superuser => $config->db_user,
                     host => $pg->host,
@@ -62,9 +59,7 @@ subtest 'create template from database' => sub {
     ok($template, 'get created template');
 
     # connect to the template database
-    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $template->name, $pg->host, $pg->port),
-                            $pg->owner, '');
+    my $dbi = _connect_to_database($template->name, $pg->owner);
     ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
     $dbi->disconnect;
 
@@ -81,32 +76,6 @@ subtest 'create template from database' => sub {
             )->dropdb;
 };
 
-subtest 'create database' => sub {
-    plan tests => 3;
-
-    # blank database
-    my $create_blank_db_cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                                host => $config->db_host,
-                                port => $config->db_port,
-                                owner => $config->test_db_owner,
-                                superuser => $config->db_user,
-                                template_id => undef,
-                                schema => $schema,
-                            );
-    ok($create_blank_db_cmd, 'new - blank db');
-    my $blank_db = $create_blank_db_cmd->execute();
-    ok($blank_db->database_id, 'execute - blank db');
-
-    my $blank_pg = TestDbServer::PostgresInstance->new(
-                                host => $config->db_host,
-                                port => $config->db_port,
-                                name => $blank_db->name,
-                                owner => $blank_db->owner,
-                                superuser => $config->db_user,
-                        );
-    ok($blank_pg->dropdb, 'drop blank db');
-};
-
 subtest 'create database with owner' => sub {
     plan tests => 6;
 
@@ -117,10 +86,7 @@ subtest 'create database with owner' => sub {
     # Make a table in the template
     my $table_name = "test_table_$$";
     {
-        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                        $pg->name, $pg->host, $pg->port),
-                                $pg->owner,
-                                '');
+        my $dbi = _connect_to_database($pg->name, $pg->owner);
         ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
             'Create table in base template');
         $dbi->disconnect;
@@ -131,7 +97,7 @@ subtest 'create database with owner' => sub {
                     owner => $new_owner,
                     host => $config->db_host,
                     port => $config->db_port,
-                    template_id => $template->template_id,
+                    template_name => $template->name,
                     schema => $schema,
                     superuser => $config->db_user,
                 );
@@ -140,9 +106,7 @@ subtest 'create database with owner' => sub {
     ok($database, 'execute');
 
     # connect to the newly created database
-    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $config->db_host, $config->db_port),
-                            $pg->owner, '');
+    my $dbi = _connect_to_database($database->name, $pg->owner);
     ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
     $dbi->disconnect;
 
@@ -172,10 +136,7 @@ subtest 'create database with invalid owner' => sub {
     # Make a table in the template
     my $table_name = "test_table_$$";
     {
-        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                        $pg->name, $pg->host, $pg->port),
-                                $pg->owner,
-                                '');
+        my $dbi = _connect_to_database($pg->name, $pg->owner);
         ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
             'Create table in base template');
         $dbi->disconnect;
@@ -186,7 +147,7 @@ subtest 'create database with invalid owner' => sub {
                     owner => $invalid_owner,
                     host => $config->db_host,
                     port => $config->db_port,
-                    template_id => $template->template_id,
+                    template_name => $template->name,
                     schema => $schema,
                     superuser => $config->db_user,
                 );
@@ -209,10 +170,7 @@ subtest 'create database from template' => sub {
     # Make a table in the template
     my $table_name = "test_table_$$";
     {
-        my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                        $pg->name, $pg->host, $pg->port),
-                                $pg->owner,
-                                '');
+        my $dbi = _connect_to_database($pg->name, $pg->owner);
         ok($dbi->do("CREATE TABLE $table_name (foo integer NOT NULL PRIMARY KEY)"),
             'Create table in base template');
         $dbi->disconnect;
@@ -222,7 +180,7 @@ subtest 'create database from template' => sub {
                     owner => undef,
                     host => $config->db_host,
                     port => $config->db_port,
-                    template_id => $template->template_id,
+                    template_name => $template->name,
                     schema => $schema,
                     superuser => $config->db_user,
                 );
@@ -231,9 +189,7 @@ subtest 'create database from template' => sub {
     ok($database, 'execute');
 
     # connect to the newly created database
-    my $dbi = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $config->db_host, $config->db_port),
-                            $database->owner, '');
+    my $dbi = _connect_to_database($database->name, $database->owner);
     ok($dbi->do("SELECT foo FROM $table_name WHERE FALSE"), 'table exists in template database');
     $dbi->disconnect;
 
@@ -251,7 +207,7 @@ subtest 'create database from template' => sub {
 };
 
 subtest 'delete template' => sub {
-    plan tests => 3;
+    plan tests => 4;
 
     my $pg = new_pg_instance();
 
@@ -262,12 +218,17 @@ subtest 'delete template' => sub {
 
     my $cmd = TestDbServer::Command::DeleteTemplate->new(
                 template_id => $template->template_id,
-                schema => $schema);
+                schema => $schema,
+                host => $config->db_host,
+                port => $config->db_port,
+                superuser => $config->db_user);
     ok($cmd, 'new');
     ok($cmd->execute(), 'execute');
 
     ok(! $schema->find_template($template->template_id),
-        'template is deleted');
+        'template record is deleted');
+
+    ok(! _connect_to_database($pg->name, $pg->owner), 'cannot connect to deleted template database');
 };
 
 subtest 'delete database' => sub {
@@ -278,7 +239,7 @@ subtest 'delete database' => sub {
                             port => $config->db_port,
                             owner => $config->test_db_owner,
                             superuser => $config->db_user,
-                            template_id => undef,
+                            template_name => $config->default_template_name,
                             schema => $schema,
                     )->execute();
     ok($database, 'Created database to delete');
@@ -315,14 +276,11 @@ subtest 'delete with connections' => sub {
                             port => $config->db_port,
                             owner => $config->test_db_owner,
                             superuser => $config->db_user,
-                            template_id => undef,
+                            template_name => $config->default_template_name,
                             schema => $schema,
                     )->execute();
     ok($database, 'Create database');
-    my $dbh = DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
-                                    $database->name, $config->db_host, $config->db_port),
-                            $database->owner,
-                            '');
+    my $dbh = _connect_to_database($database->name, $database->owner);
     ok($dbh, 'connect to created database');
     my $cmd = TestDbServer::Command::DeleteDatabase->new(
                                     database_id => $database->id,
@@ -361,3 +319,10 @@ sub create_new_schema {
     return TestDbServer::Schema->connect($config->db_connect_string, $config->db_user, $config->db_password);
 }
 
+sub _connect_to_database {
+    my($name, $owner) = @_;
+
+    return DBI->connect(sprintf('dbi:Pg:dbname=%s;host=%s;port=%s',
+                                $name, $config->db_host, $config->db_port),
+                        $owner, '');
+}

@@ -1,4 +1,4 @@
-From 8b8a9fdc458e6fef2d2d71343e6517dfe9030b8d Mon Sep 17 00:00:00 2001
+From 5d771fcd682d80b45ab72c37734cc9da99b1d3b9 Mon Sep 17 00:00:00 2001
 From: Nathan Nutter <nnutter@genome.wustl.edu>
 Date: Wed, 19 Nov 2014 16:15:31 -0600
 Subject: rewrite hashbangs to use /usr/bin/perl
@@ -24,17 +24,17 @@ index 6c7ddbd..9782b15 100755
  # Entry point for the client-side command-line tool for the test_db_server REST service
  
 diff --git a/bin/test-db-database-create b/bin/test-db-database-create
-index 4eb30d4..d13f25a 100755
+index 4980d5f..1ea3f50 100755
 --- a/bin/test-db-database-create
 +++ b/bin/test-db-database-create
 @@ -1,4 +1,4 @@
 -#!/usr/bin/env perl
 +#!/usr/bin/perl
  
- use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
+ use TestDbServer::CmdLine qw(get_user_agent url_for assert_success parse_opts);
  use LWP;
 diff --git a/bin/test-db-database-list b/bin/test-db-database-list
-index ea9e88d..a528ca3 100755
+index 11b6287..c8a7fa4 100755
 --- a/bin/test-db-database-list
 +++ b/bin/test-db-database-list
 @@ -1,4 +1,4 @@
@@ -44,17 +44,17 @@ index ea9e88d..a528ca3 100755
  use strict;
  use warnings;
 diff --git a/bin/test-db-delete b/bin/test-db-delete
-index a0320b5..cbab692 100755
+index c579410..b51de00 100755
 --- a/bin/test-db-delete
 +++ b/bin/test-db-delete
 @@ -1,4 +1,4 @@
 -#!/usr/bin/env perl
 +#!/usr/bin/perl
  
- use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
+ use TestDbServer::CmdLine qw(get_user_agent url_for assert_success parse_opts);
  use LWP;
 diff --git a/bin/test-db-template-create b/bin/test-db-template-create
-index 98492b3..36035bd 100755
+index f405068..dd0c39b 100755
 --- a/bin/test-db-template-create
 +++ b/bin/test-db-template-create
 @@ -1,4 +1,4 @@
@@ -64,7 +64,7 @@ index 98492b3..36035bd 100755
  use strict;
  use warnings;
 diff --git a/bin/test-db-template-list b/bin/test-db-template-list
-index 4453156..7007d14 100755
+index fc3270e..82e2abf 100755
 --- a/bin/test-db-template-list
 +++ b/bin/test-db-template-list
 @@ -1,4 +1,4 @@

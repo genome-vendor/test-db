@@ -115,51 +115,50 @@ sub _hashref_for_database_obj {
     my %h;
     @h{'id','name','owner','created','expires','template_id'}
         = map { $database->$_ } qw( database_id name owner create_time expire_time template_id );
-    @h{'host','port'} = $self->app->host_and_port_for_created_database();
+
+    $h{host} = $self->app->configuration->external_hostname;
+    $h{port} = $self->app->configuration->db_port;
 
     return \%h;
+}
+
+sub _resolve_template_name_and_owner_for_creating_database {
+    my $self = shift;
+
+    my $template_name = $self->req->param('based_on');
+    my $owner = $self->req->param('owner');
+    unless ($template_name) {
+        $template_name = $self->app->configuration->default_template_name;
+        $self->app->log->info("create database from default template: $template_name");
+
+        # The real owner of this template is likely the postgres superuser.
+        # Instead, use this owner from the configuration
+        $owner ||= $self->app->configuration->db_user;
+    }
+
+    return ($template_name, $owner);
 }
 
 sub create {
     my $self = shift;
 
-    my $schema = $self->app->db_storage();
-    my $template_id = $self->req->param('based_on');
-    my $owner = $self->req->param('owner');
-    if ($template_id) {
-        $self->app->log->info("create database from template $template_id");
-    }
-    else {
-        $self->app->log->info("create database from default template");
-    }
-    $self->_create_database_from_template($owner, $template_id);
-}
-
-sub _create_database_from_template {
-    my($self, $owner, $template_id) = @_;
-
-    $self->_create_database_common(sub {
-            my($host, $port) = $self->app->host_and_port_for_created_database();
-            TestDbServer::Command::CreateDatabaseFromTemplate->new(
-                            owner => $owner,
-                            template_id => $template_id,
-                            host => $host,
-                            port => $port,
-                            superuser => $self->app->configuration->db_user,
-                            schema => $self->app->db_storage,
-                    );
-        });
-}
-
-sub _create_database_common {
-    my($self, $cmd_creator_sub) = @_;
+    my($template_name, $owner) = $self->_resolve_template_name_and_owner_for_creating_database();
+    $self->app->log->info("create database from template $template_name");
 
     my $schema = $self->app->db_storage;
 
     my($database, $return_code);
     try {
         $schema->txn_do(sub {
-            my $cmd = $cmd_creator_sub->();
+            my($host, $port) = $self->app->host_and_port_for_created_database();
+            my $cmd = TestDbServer::Command::CreateDatabaseFromTemplate->new(
+                            owner => $owner,
+                            template_name => $template_name,
+                            host => $host,
+                            port => $port,
+                            superuser => $self->app->configuration->db_user,
+                            schema => $self->app->db_storage,
+                    );
             $database = $cmd->execute();
         });
     }

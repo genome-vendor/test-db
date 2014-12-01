@@ -8,13 +8,15 @@ use LWP;
 use Carp;
 use URI::Escape qw(uri_escape);
 use JSON qw(decode_json);
+use Getopt::Long qw();
 
 use strict;
 use warnings;
 
 use Exporter 'import';
 our @EXPORT_OK = qw(get_user_agent url_for assert_success template_id_from_name database_id_from_name
-                    get_template_name_from_id get_database_name_from_id foreach_database_or_template);
+                    get_template_name_from_id get_database_name_from_id foreach_database_or_template
+                    parse_opts);
 
 sub find_available_sub_command_paths {
     my($cmd) = shift;
@@ -37,12 +39,15 @@ sub split_into_command_to_run_and_args {
     return ($base_command_path, @argv);
 }
 
+sub default_timeout { $ENV{TESTDBSERVER_TIMEOUT} || 5 }
+
 my $ua;
 sub get_user_agent {
+    my $timeout = shift || default_timeout();
     unless($ua) {
         $ua = LWP::UserAgent->new;
         $ua->agent("TestDbServer::CmdLine/0.1 ");
-        $ua->timeout(5);
+        $ua->timeout($timeout);
     }
     return $ua;
 }
@@ -90,21 +95,21 @@ sub assert_success {
 }
 
 sub get_template_name_from_id {
-    my($template_id) = @_;
-    return _get_type_name_from_id('templates', $template_id);
+    my($template_id, $timeout) = @_;
+    return _get_type_name_from_id('templates', $template_id, $timeout);
 }
 
 sub get_database_name_from_id {
-    my($database_id) = @_;
-    return _get_type_name_from_id('databases', $database_id);
+    my($database_id, $timeout) = @_;
+    return _get_type_name_from_id('databases', $database_id, $timeout);
 }
 
 sub _get_type_name_from_id {
-    my($type, $id) = @_;
+    my($type, $id, $timeout) = @_;
 
     return undef unless defined $id;
 
-    my $ua = get_user_agent();
+    my $ua = get_user_agent($timeout);
 
     my $req = HTTP::Request->new(GET => url_for($type, $id));
     my $rsp = $ua->request($req);
@@ -116,9 +121,9 @@ sub _get_type_name_from_id {
 }
 
 sub foreach_database_or_template {
-    my($type, $cb) = @_;
+    my($type, $cb, $timeout) = @_;
 
-    my $ua = get_user_agent();
+    my $ua = get_user_agent($timeout);
 
     my $req = HTTP::Request->new(GET => url_for($type));
     my $rsp = $ua->request($req);
@@ -136,5 +141,17 @@ sub foreach_database_or_template {
     }
     return $count || '0 but true';
 }
+
+sub parse_opts {
+    my @desc = @_;
+    my $opts = {};
+    my $opts_parser = Getopt::Long::Parser->new();
+    my $ok = $opts_parser->getoptions($opts, @desc);
+    unless ($ok) {
+        exit 9;
+    }
+    return $opts;
+}
+
 
 1;
