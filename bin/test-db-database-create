@@ -1,17 +1,14 @@
 #!/usr/bin/env perl
 
-use TestDbServer::CmdLine qw(get_user_agent url_for assert_success);
+use TestDbServer::CmdLine qw(get_user_agent url_for assert_success parse_opts);
 use LWP;
-use Getopt::Long;
 use JSON qw(decode_json);
 
-my $opts = {};
-GetOptions($opts, 'owner=s', 'based-on=s','bash','short-help','help');
-
+my $opts = parse_opts('owner=s', 'based-on=s', 'timeout=i', 'bash', 'short-help', 'help');
 print_short_help() if ($opts->{'short-help'});
 print_help() if ($opts->{help});
 
-my $ua = get_user_agent();
+my $ua = get_user_agent($opts->{timeout});
 my @options = make_post_options($opts);
 my $req = HTTP::Request->new(POST => url_for('databases', \@options));
 my $rsp = $ua->request($req);
@@ -31,24 +28,10 @@ exit 0;
 sub make_post_options {
     my $opts = shift;
     my @options;
-    if ($opts->{owner}) {
-        @options = ( owner => $opts->{owner} );
 
-    } else {
-        my $req = HTTP::Request->new(GET => url_for('templates', [ name => $opts->{'based-on'} ]));
-        my $rsp = $ua->request($req);
-        assert_success $rsp;
+    push(@options, owner => $opts->{owner}) if $opts->{owner};
+    push(@options, based_on => $opts->{'based-on'}) if $opts->{'based-on'};
 
-        my $ids = decode_json($rsp->content);
-        if (! @$ids) {
-            print STDERR "There is no template with that name\n";
-            exit 2;
-        } elsif (@$ids > 1) {
-            print STDERR "There are multiple matches for that name?! (found ",scalar(@$ids),"\n";
-            exit 3;
-        }
-        @options = ( 'based_on' => $ids->[0] );
-    }
     return @options;
 }
 
