@@ -1,4 +1,4 @@
-From 5d771fcd682d80b45ab72c37734cc9da99b1d3b9 Mon Sep 17 00:00:00 2001
+From 57fe68a76a832ed1e99612bb9d848952578b4888 Mon Sep 17 00:00:00 2001
 From: Nathan Nutter <nnutter@genome.wustl.edu>
 Date: Wed, 19 Nov 2014 16:15:31 -0600
 Subject: rewrite hashbangs to use /usr/bin/perl
@@ -14,7 +14,7 @@ Subject: rewrite hashbangs to use /usr/bin/perl
  7 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/bin/test-db b/bin/test-db
-index 6c7ddbd..9782b15 100755
+index 63209f9..2f0389f 100755
 --- a/bin/test-db
 +++ b/bin/test-db
 @@ -1,4 +1,4 @@
@@ -24,7 +24,7 @@ index 6c7ddbd..9782b15 100755
  # Entry point for the client-side command-line tool for the test_db_server REST service
  
 diff --git a/bin/test-db-database-create b/bin/test-db-database-create
-index 4980d5f..1ea3f50 100755
+index 4fb279a..8e025cc 100755
 --- a/bin/test-db-database-create
 +++ b/bin/test-db-database-create
 @@ -1,4 +1,4 @@
@@ -44,7 +44,7 @@ index 11b6287..c8a7fa4 100755
  use strict;
  use warnings;
 diff --git a/bin/test-db-delete b/bin/test-db-delete
-index c579410..b51de00 100755
+index 2887500..b29778f 100755
 --- a/bin/test-db-delete
 +++ b/bin/test-db-delete
 @@ -1,4 +1,4 @@
@@ -54,7 +54,7 @@ index c579410..b51de00 100755
  use TestDbServer::CmdLine qw(get_user_agent url_for assert_success parse_opts);
  use LWP;
 diff --git a/bin/test-db-template-create b/bin/test-db-template-create
-index f405068..dd0c39b 100755
+index 39e5ba5..f7c1176 100755
 --- a/bin/test-db-template-create
 +++ b/bin/test-db-template-create
 @@ -1,4 +1,4 @@
