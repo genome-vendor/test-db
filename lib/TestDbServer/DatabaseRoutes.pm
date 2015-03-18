@@ -77,7 +77,7 @@ sub get {
 
     } else {
         $self->app->log->info("database $id not found");
-        $self->render_not_found;
+        $self->render(status => 404, text => "database $id not found");
     }
 }
 
@@ -166,6 +166,10 @@ sub create {
         if (ref($_) && $_->isa('Exception::TemplateNotFound')) {
             $self->app->log->error('template not found');
             $return_code = 404;
+
+        } elsif (ref($_) && $_->isa('Exception::CannotCreateDatabase')) {
+            $self->app->log->error("Cannot create database: $_");
+            $return_code = 503;
 
         } else {
             $self->app->log->fatal("_create_database_from_template: $_");
