@@ -1,3 +1,9 @@
+test-db (0.0.7-1) precise; urgency=low
+
+  * New upstream version, 0.0.7.
+
+ -- Nathaniel Nutter <nnutter@genome.wustl.edu>  Wed, 18 Mar 2015 15:30:01 -0500
+
 test-db (0.0.5-1) precise; urgency=low
 
   * New upstream version, 0.0.5
