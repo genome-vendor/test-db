@@ -1,16 +1,16 @@
-From 57fe68a76a832ed1e99612bb9d848952578b4888 Mon Sep 17 00:00:00 2001
+From 478fa0d14b5da0a81fccbd132db71935d33604ec Mon Sep 17 00:00:00 2001
 From: Nathan Nutter <nnutter@genome.wustl.edu>
 Date: Wed, 19 Nov 2014 16:15:31 -0600
 Subject: rewrite hashbangs to use /usr/bin/perl
 
 ---
- bin/test-db                 |    2 +-
- bin/test-db-database-create |    2 +-
- bin/test-db-database-list   |    2 +-
- bin/test-db-delete          |    2 +-
- bin/test-db-template-create |    2 +-
- bin/test-db-template-list   |    2 +-
- bin/test_db_server.pl       |    2 +-
+ bin/test-db                 | 2 +-
+ bin/test-db-database-create | 2 +-
+ bin/test-db-database-list   | 2 +-
+ bin/test-db-delete          | 2 +-
+ bin/test-db-template-create | 2 +-
+ bin/test-db-template-list   | 2 +-
+ bin/test_db_server.pl       | 2 +-
  7 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/bin/test-db b/bin/test-db
