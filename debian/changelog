@@ -1,3 +1,9 @@
+test-db (0.0.8-1) lucid; urgency=low
+
+  * New upstream version 0.0.8
+
+ -- Anthony Brummett <abrummet@linus146.gsc.wustl.edu>  Thu, 13 Aug 2015 15:05:20 -0500
+
 test-db (0.0.7-1) precise; urgency=low
 
   * New upstream version, 0.0.7.
